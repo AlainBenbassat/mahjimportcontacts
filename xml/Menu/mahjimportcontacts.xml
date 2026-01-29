@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/mahj-import-newsletter-contacts</path>
+    <page_callback>CRM_Mahjimportcontacts_Form_ImportForm</page_callback>
+    <title>ImportForm</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+</menu>
