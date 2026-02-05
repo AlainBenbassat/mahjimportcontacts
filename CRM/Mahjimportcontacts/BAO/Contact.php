@@ -70,9 +70,15 @@ class CRM_Mahjimportcontacts_BAO_Contact {
       ->execute();
   }
 
-  public static function createPhone(int $contactId, string $phoneNumber) {
+  public static function createPhone(int $contactId, string $phoneNumber, bool $forceAdd) {
     if (empty($phoneNumber)) {
       return;
+    }
+
+    if (!$forceAdd) {
+      if (self::existsPhone($contactId)) {
+        return;
+      }
     }
 
     \Civi\Api4\Phone::create(FALSE)
@@ -83,9 +89,15 @@ class CRM_Mahjimportcontacts_BAO_Contact {
       ->execute();
   }
 
-  public static function createAddress(int $contactId, ?string $streetAddress, ?string $city, ?string $postalCode, ?string $countryName) {
+  public static function createAddress(int $contactId, ?string $streetAddress, ?string $city, ?string $postalCode, ?string $countryName, bool $forceAdd) {
     if (empty($postalCode)) {
       return;
+    }
+
+    if (!$forceAdd) {
+      if (self::existsAddress($contactId)) {
+        return;
+      }
     }
 
     \Civi\Api4\Address::create(FALSE)
@@ -354,6 +366,32 @@ class CRM_Mahjimportcontacts_BAO_Contact {
 
       default:
         return NULL;
+    }
+  }
+
+  private static function existsAddress(int $contactId) {
+    $result = \Civi\Api4\Address::get(FALSE)
+      ->addWhere('contact_id', '=', $contactId)
+      ->execute();
+
+    if ($result) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  private static function existsPhone(int $contactId) {
+    $result = \Civi\Api4\Phone::get(FALSE)
+      ->addWhere('contact_id', '=', $contactId)
+      ->execute();
+
+    if ($result) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
     }
   }
 

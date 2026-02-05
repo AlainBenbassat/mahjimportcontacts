@@ -95,37 +95,48 @@ class CRM_Mahjimportcontacts_BAO_Processor {
   }
 
   private function processLineOrganization(int $lineNumber) {
+    $forceAdd = FALSE;
+
     $email = $this->getCellValue('email', $lineNumber);
     $contactId = CRM_Mahjimportcontacts_BAO_Contact::findContactByEmail($email);
     if ($contactId == 0) {
       $contactId = CRM_Mahjimportcontacts_BAO_Contact::createOrganization($this->getCellValue('employer_name', $lineNumber), $email);
-      CRM_Mahjimportcontacts_BAO_Contact::createAddress(
-        $contactId,
-        $this->getCellValue('street_address', $lineNumber),
-        $this->getCellValue('city', $lineNumber),
-        $this->getCellValue('postal_code', $lineNumber),
-        $this->getCellValue('country_name', $lineNumber)
-      );
-      CRM_Mahjimportcontacts_BAO_Contact::createPhone($contactId, $this->getCellValue('phone', $lineNumber));
+      $forceAdd = TRUE; // do not check if the contact has an address of phone
     }
+
+    CRM_Mahjimportcontacts_BAO_Contact::createAddress(
+      $contactId,
+      $this->getCellValue('street_address', $lineNumber),
+      $this->getCellValue('city', $lineNumber),
+      $this->getCellValue('postal_code', $lineNumber),
+      $this->getCellValue('country_name', $lineNumber),
+      $forceAdd
+    );
+    CRM_Mahjimportcontacts_BAO_Contact::createPhone($contactId, $this->getCellValue('phone', $lineNumber), $forceAdd);
 
     CRM_Mahjimportcontacts_BAO_Group::addContact($contactId, $this->importGroupId);
   }
 
   private function processLineIndividual(int $lineNumber) {
+    $forceAdd = FALSE;
+
     $email = $this->getCellValue('email', $lineNumber);
     $contactId = CRM_Mahjimportcontacts_BAO_Contact::findContactByEmail($email);
     if ($contactId == 0) {
       $contactId = CRM_Mahjimportcontacts_BAO_Contact::createIndividual($this->getCellValue('first_name', $lineNumber), $this->getCellValue('last_name', $lineNumber), $email);
-      CRM_Mahjimportcontacts_BAO_Contact::createAddress(
-        $contactId,
-        $this->getCellValue('street_address', $lineNumber),
-        $this->getCellValue('city', $lineNumber),
-        $this->getCellValue('postal_code', $lineNumber),
-        $this->getCellValue('country_name', $lineNumber)
-      );
-      CRM_Mahjimportcontacts_BAO_Contact::createPhone($contactId, $this->getCellValue('phone', $lineNumber));
+      $forceAdd = TRUE;  // do not check if the contact has an address of phone
     }
+
+    // update address and phone
+    CRM_Mahjimportcontacts_BAO_Contact::createAddress(
+      $contactId,
+      $this->getCellValue('street_address', $lineNumber),
+      $this->getCellValue('city', $lineNumber),
+      $this->getCellValue('postal_code', $lineNumber),
+      $this->getCellValue('country_name', $lineNumber),
+      $forceAdd
+    );
+    CRM_Mahjimportcontacts_BAO_Contact::createPhone($contactId, $this->getCellValue('phone', $lineNumber), $forceAdd);
 
     CRM_Mahjimportcontacts_BAO_Group::addContact($contactId, $this->importGroupId);
   }
