@@ -7,8 +7,9 @@ class CRM_Mahjimportcontacts_BAO_Processor {
   private PhpOffice\PhpSpreadsheet\Spreadsheet $inputFile;
   private PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet;
   private $columnHeading = [];
+  private $importGroupId;
 
-  public function __construct(string $inputFile = '/tmp/test.xlsx') {
+  public function __construct(string $inputFile) {
     $this->inputFile = \PhpOffice\PhpSpreadsheet\IOFactory::load($inputFile);
     $this->worksheet = $this->inputFile->getActiveSheet();
   }
@@ -24,13 +25,15 @@ class CRM_Mahjimportcontacts_BAO_Processor {
     $this->findColumnHeading('city', 'Ville');
     $this->findColumnHeading('country_name', 'Pays');
 
+    $this->importGroupId = CRM_Mahjimportcontacts_BAO_Group::getGroupOfTheMonth();
+
     $lineNumber = 2;
     while (!$this->isEmptyLine($lineNumber)) {
       $this->processLine($lineNumber);
       $lineNumber++;
     }
 
-    return ($lineNumber - 1);
+    return $lineNumber - 2;
   }
 
   private function findColumnHeading(string $key, string $columnName): void {
@@ -94,22 +97,37 @@ class CRM_Mahjimportcontacts_BAO_Processor {
   private function processLineOrganization(int $lineNumber) {
     $email = $this->getCellValue('email', $lineNumber);
     $contactId = CRM_Mahjimportcontacts_BAO_Contact::findContactByEmail($email);
-    if ($contactId > 0) {
-      echo "$lineNumber. EXISTING ORG: " . $this->getCellValue('employer_name', $lineNumber) . "\n";
-      return; // skip, already exists
+    if ($contactId == 0) {
+      $contactId = CRM_Mahjimportcontacts_BAO_Contact::createOrganization($this->getCellValue('employer_name', $lineNumber), $email);
+      CRM_Mahjimportcontacts_BAO_Contact::createAddress(
+        $contactId,
+        $this->getCellValue('street_address', $lineNumber),
+        $this->getCellValue('city', $lineNumber),
+        $this->getCellValue('postal_code', $lineNumber),
+        $this->getCellValue('country_name', $lineNumber)
+      );
+      CRM_Mahjimportcontacts_BAO_Contact::createPhone($contactId, $this->getCellValue('phone', $lineNumber));
     }
 
-    echo "$lineNumber. NEW ORG: " . $this->getCellValue('employer_name', $lineNumber) . "\n";
+    CRM_Mahjimportcontacts_BAO_Group::addContact($contactId, $this->importGroupId);
   }
 
   private function processLineIndividual(int $lineNumber) {
     $email = $this->getCellValue('email', $lineNumber);
     $contactId = CRM_Mahjimportcontacts_BAO_Contact::findContactByEmail($email);
-    if ($contactId > 0) {
-      echo "$lineNumber. EXISTING INDIVIDUAL: " . $this->getCellValue('first_name', $lineNumber) . " " . $this->getCellValue('last_name', $lineNumber) . "\n";
-      return; // skip, already exists
+    if ($contactId == 0) {
+      $contactId = CRM_Mahjimportcontacts_BAO_Contact::createIndividual($this->getCellValue('first_name', $lineNumber), $this->getCellValue('last_name', $lineNumber), $email);
+      CRM_Mahjimportcontacts_BAO_Contact::createAddress(
+        $contactId,
+        $this->getCellValue('street_address', $lineNumber),
+        $this->getCellValue('city', $lineNumber),
+        $this->getCellValue('postal_code', $lineNumber),
+        $this->getCellValue('country_name', $lineNumber)
+      );
+      CRM_Mahjimportcontacts_BAO_Contact::createPhone($contactId, $this->getCellValue('phone', $lineNumber));
     }
-    echo "$lineNumber. NEW INDIVIDUAL: " . $this->getCellValue('first_name', $lineNumber) . " " . $this->getCellValue('last_name', $lineNumber) . "\n";
+
+    CRM_Mahjimportcontacts_BAO_Group::addContact($contactId, $this->importGroupId);
   }
 
   private function getCellValue($fieldName, $lineNumber) {
